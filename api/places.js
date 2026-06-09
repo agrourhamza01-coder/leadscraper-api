@@ -7,10 +7,29 @@ export default async function handler(req, res) {
   if (!query || !key) return res.status(400).json({ error: 'Paramètres manquants' });
 
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&language=fr&key=${key}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    res.status(200).json(data);
+    let allResults = [];
+    let nextPageToken = null;
+
+    do {
+      let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&language=fr&key=${key}`;
+      if (nextPageToken) {
+        url += `&pagetoken=${nextPageToken}`;
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+        return res.status(200).json({ error: data.status, results: allResults });
+      }
+
+      allResults = [...allResults, ...(data.results || [])];
+      nextPageToken = data.next_page_token || null;
+
+    } while (nextPageToken && allResults.length < 60);
+
+    res.status(200).json({ status: 'OK', results: allResults });
   } catch (e) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
