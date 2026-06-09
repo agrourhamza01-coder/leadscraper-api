@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/places.js": {
+      "runtime": "edge"
+    }
+  }
+}
